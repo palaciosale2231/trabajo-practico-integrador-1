@@ -1,28 +1,46 @@
 import { DataTypes } from "sequelize";
-import { sequelize } from "../config/database.js";
+import { sequelize } from "../config/database.js"; // Ajusta la ruta a tu conexión DB
 
 export const UserModel = sequelize.define(
-  "UserModel",
+  "User",
   {
-    // Model attributes are defined here
-    name: {
-      type: DataTypes.STRING(100),
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+    },
+    username: {
+      type: DataTypes.STRING(20),
+      unique: true,
       allowNull: false,
+      validate: {
+        len: [3, 20],
+      },
     },
     email: {
       type: DataTypes.STRING(100),
-      allowNull: false,
       unique: true,
+      allowNull: false,
+      validate: {
+        isEmail: true,
+      },
     },
     password: {
-      type: DataTypes.STRING(100),
+      type: DataTypes.STRING(255),
+      allowNull: false,
+    },
+    role: {
+      type: DataTypes.ENUM("user", "admin"),
+      defaultValue: "user",
       allowNull: false,
     },
   },
   {
-    // Other model options go here
-    // createdAt: "created_at",
-    // updatedAt: false,
-    // timestamps: false,
+    tableName: "users",
+    timestamps: true,
+    paranoid: true, // Activa el deleted_at para eliminación lógica (Soft Delete)
+    createdAt: "created_at",
+    updatedAt: "updated_at",
+    deletedAt: "deleted_at",
   },
 );
