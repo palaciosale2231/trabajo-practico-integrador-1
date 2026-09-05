@@ -1,6 +1,2 @@
-PORT=3000
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=tu_contraseña
-DB_NAME=blog_db
-JWT_SECRET=secreto_super_seguro_jwt_123
+node_modules/
+.env

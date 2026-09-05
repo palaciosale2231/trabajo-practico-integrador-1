@@ -1,7 +1,7 @@
 import { Sequelize } from "sequelize";
 
 // conexion a la base de datos
-export const sequelize = new Sequelize("myproject", "root", "", {
+export const sequelize = new Sequelize("tp_integrador1", "root", "", {
   host: "localhost",
   dialect: "mysql",
 });
