@@ -1,70 +1,310 @@
-import { UserModel } from "../models/user.model.js";
+import {
+  UserModel,
+  ProfileModel,
+  ArticleModel
+} from "../models/index.js";
 
-// 1. CREAR
-export const createUser = async (req, res) => {
-  try {
-    const { name, email, password } = req.body;
+import {
+  hashPassword
+} from "../helpers/bcrypt.helper.js";
 
-    const existingUser = await UserModel.findOne({ where: { email } });
-    if (existingUser)
-      return res.status(400).json({ message: "El email ya existe" });
 
-    const user = await UserModel.create({ name, email, password });
-    return res.status(201).json(user);
-  } catch (error) {
-    return res.status(500).json({ message: "Error interno" });
-  }
-};
+// ==========================================
+// GET TODOS LOS USUARIOS
+// ==========================================
 
-// 2. OBTENER TODOS
 export const getAllUsers = async (req, res) => {
   try {
-    const users = await UserModel.findAll();
+
+    const users = await UserModel.findAll({
+      attributes: {
+        exclude: ["password"]
+      },
+
+      include: {
+        model: ProfileModel,
+        as: "profile"
+      }
+    });
+
+
     return res.status(200).json(users);
+
   } catch (error) {
-    return res.status(500).json({ message: "Error interno" });
+
+    return res.status(500).json({
+      message: "Error al obtener usuarios",
+      error: error.message
+    });
+
   }
 };
 
-// 3. OBTENER POR ID
+
+// ==========================================
+// GET USUARIO POR ID
+// ==========================================
+
 export const getUserById = async (req, res) => {
   try {
-    const user = await UserModel.findByPk(req.params.id);
-    if (!user)
-      return res.status(404).json({ message: "Usuario no encontrado" });
+
+    const { id } = req.params;
+
+
+    const user = await UserModel.findByPk(id, {
+
+      attributes: {
+        exclude: ["password"]
+      },
+
+      include: [
+        {
+          model: ProfileModel,
+          as: "profile"
+        },
+
+        {
+          model: ArticleModel,
+          as: "articles"
+        }
+      ]
+    });
+
+
+    if (!user) {
+      return res.status(404).json({
+        message: "Usuario no encontrado"
+      });
+    }
+
 
     return res.status(200).json(user);
+
   } catch (error) {
-    return res.status(500).json({ message: "Error interno" });
+
+    return res.status(500).json({
+      message: "Error al obtener usuario",
+      error: error.message
+    });
+
   }
 };
 
-// 4. ACTUALIZAR
+
+// ==========================================
+// CREAR USUARIO
+// ==========================================
+
+export const createUser = async (req, res) => {
+  try {
+
+    const {
+      username,
+      email,
+      password,
+      role,
+      first_name,
+      last_name
+    } = req.body;
+
+
+    // Verificar username
+    const existingUsername = await UserModel.findOne({
+      where: { username }
+    });
+
+
+    if (existingUsername) {
+      return res.status(400).json({
+        message: "El username ya existe"
+      });
+    }
+
+
+    // Verificar email
+    const existingEmail = await UserModel.findOne({
+      where: { email }
+    });
+
+
+    if (existingEmail) {
+      return res.status(400).json({
+        message: "El email ya existe"
+      });
+    }
+
+
+    // Hashear password
+    const hashedPassword = await hashPassword(password);
+
+
+    // Crear usuario
+    const user = await UserModel.create({
+      username,
+      email,
+      password: hashedPassword,
+      role
+    });
+
+
+    // Crear perfil
+    await ProfileModel.create({
+      user_id: user.id,
+      first_name,
+      last_name
+    });
+
+
+    return res.status(201).json({
+      message: "Usuario creado correctamente",
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role
+      }
+    });
+
+  } catch (error) {
+
+    return res.status(500).json({
+      message: "Error al crear usuario",
+      error: error.message
+    });
+
+  }
+};
+
+
+// ==========================================
+// ACTUALIZAR USUARIO
+// ==========================================
+
 export const updateUser = async (req, res) => {
   try {
-    const [updatedRows] = await UserModel.update(req.body, {
-      where: { id: req.params.id },
-    });
-    if (updatedRows === 0)
-      return res.status(404).json({ message: "Usuario no encontrado" });
 
-    return res.status(200).json({ message: "Usuario actualizado" });
+    const { id } = req.params;
+
+    const {
+      username,
+      email,
+      password,
+      role
+    } = req.body;
+
+
+    const user = await UserModel.findByPk(id);
+
+
+    if (!user) {
+      return res.status(404).json({
+        message: "Usuario no encontrado"
+      });
+    }
+
+
+    // Verificar username
+    if (
+      username &&
+      username !== user.username
+    ) {
+
+      const existingUsername = await UserModel.findOne({
+        where: { username }
+      });
+
+
+      if (existingUsername) {
+        return res.status(400).json({
+          message: "El username ya existe"
+        });
+      }
+    }
+
+
+    // Verificar email
+    if (
+      email &&
+      email !== user.email
+    ) {
+
+      const existingEmail = await UserModel.findOne({
+        where: { email }
+      });
+
+
+      if (existingEmail) {
+        return res.status(400).json({
+          message: "El email ya existe"
+        });
+      }
+    }
+
+
+    const data = {
+      username,
+      email,
+      role
+    };
+
+
+    // Si mandaron password, la hasheamos
+    if (password) {
+      data.password = await hashPassword(password);
+    }
+
+
+    await user.update(data);
+
+
+    return res.status(200).json({
+      message: "Usuario actualizado correctamente"
+    });
+
   } catch (error) {
-    return res.status(500).json({ message: "Error interno" });
+
+    return res.status(500).json({
+      message: "Error al actualizar usuario",
+      error: error.message
+    });
+
   }
 };
 
-// 5. ELIMINAR
+
+// ==========================================
+// ELIMINAR USUARIO
+// ==========================================
+
 export const deleteUser = async (req, res) => {
   try {
-    const deletedRows = await UserModel.destroy({
-      where: { id: req.params.id },
-    });
-    if (deletedRows === 0)
-      return res.status(404).json({ message: "Usuario no encontrado" });
 
-    return res.status(200).json({ message: "Usuario eliminado" });
+    const { id } = req.params;
+
+
+    const user = await UserModel.findByPk(id);
+
+
+    if (!user) {
+      return res.status(404).json({
+        message: "Usuario no encontrado"
+      });
+    }
+
+
+    await user.destroy();
+
+
+    return res.status(200).json({
+      message: "Usuario eliminado correctamente"
+    });
+
   } catch (error) {
-    return res.status(500).json({ message: "Error interno" });
+
+    return res.status(500).json({
+      message: "Error al eliminar usuario",
+      error: error.message
+    });
+
   }
 };
