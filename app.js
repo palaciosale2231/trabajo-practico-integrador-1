@@ -11,6 +11,7 @@ app.use(express.json());
 
 app.use("/api", userRouter);
 
+
 // app.use("/", (req, res) => {
 //   return res.json({ message: "servidor todo listo" });
 // });
